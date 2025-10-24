@@ -3,10 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Roleta Russa</title>
+  <title>Roleta Russa - Jogo de Sorte</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(1080deg); } }
+    @keyframes spin { 
+      from { transform: rotate(0deg); } 
+      to { transform: rotate(1080deg); } 
+    }
     @keyframes shake {
       0%, 100% { transform: translateX(0); }
       10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
@@ -22,9 +25,19 @@
       50% { opacity: 0.4; transform: translateY(-30px) scale(1); }
       100% { opacity: 0; transform: translateY(-60px) scale(1.5); }
     }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
 
     .spin-animation { animation: spin 2s ease-out; }
     .shake-animation { animation: shake 0.5s; }
+    .fade-in { animation: fadeIn 0.5s ease-in; }
+    .pulse-animation { animation: pulse 2s infinite; }
 
     .cylinder {
       position: relative;
@@ -58,18 +71,8 @@
       transition: transform 0.2s;
     }
 
-    .cylinder-chamber.loaded::after {
-      content: "";
-      position: absolute;
-      width: 12px;
-      height: 12px;
-      background: crimson;
-      border-radius: 50%;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      box-shadow: 0 0 10px red;
-    }
+    /* Removido o ponto vermelho que denunciava o projétil */
+    /* Agora o projétil é invisível para o jogador */
 
     .chamber-position { position: absolute; top: 50%; left: 50%; }
     .chamber-0 { transform: translate(-50%, -50%) rotate(0deg) translateY(-85px); }
@@ -107,11 +110,38 @@
       filter: blur(4px);
     }
     .smoke.show { animation: smoke 2s ease-out forwards; }
+
+    .stats-container {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      padding: 15px;
+      margin-top: 20px;
+    }
+
+    .game-over {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s;
+    }
+    .game-over.show {
+      opacity: 1;
+      pointer-events: all;
+    }
   </style>
 </head>
 <body class="bg-[#121212] text-gray-100 min-h-screen flex flex-col justify-center">
   <div class="container mx-auto px-4 max-w-2xl text-center">
-    <h1 class="text-5xl font-bold mb-6 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">🎯 Roleta Russa</h1>
+    <h1 class="text-5xl font-bold mb-6 bg-gradient-to-r from-red-600 to-yellow-500 bg-clip-text text-transparent">🎯 Roleta Russa</h1>
     <p class="text-gray-400 mb-8">Gire o tambor e veja se o destino está do seu lado...</p>
 
     <div class="bg-gray-800 p-8 rounded-2xl shadow-2xl mb-8">
@@ -130,11 +160,39 @@
       </div>
 
       <p id="status" class="mt-6 text-gray-400 text-sm">Pressione "Girar Tambor" para começar</p>
+      
+      <div class="stats-container mt-4">
+        <div class="flex justify-between text-sm">
+          <div>
+            <span class="text-gray-400">Rodadas jogadas:</span>
+            <span id="roundsPlayed" class="text-white ml-2">0</span>
+          </div>
+          <div>
+            <span class="text-gray-400">Sobrevivências:</span>
+            <span id="survivals" class="text-green-400 ml-2">0</span>
+          </div>
+          <div>
+            <span class="text-gray-400">Probabilidade:</span>
+            <span id="probability" class="text-yellow-400 ml-2">16.7%</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="space-y-4">
-      <button id="spinBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-lg">🔄 Girar Tambor</button>
-      <button id="fireBtn" disabled class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-lg disabled:bg-gray-500">🔫 Disparar!</button>
+      <button id="spinBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-lg transition-all duration-300 pulse-animation">🔄 Girar Tambor</button>
+      <button id="fireBtn" disabled class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-lg disabled:bg-gray-500 transition-all duration-300">🔫 Disparar!</button>
+    </div>
+  </div>
+
+  <div id="gameOver" class="game-over">
+    <div class="bg-gray-800 p-8 rounded-2xl text-center max-w-md fade-in">
+      <h2 class="text-3xl font-bold text-red-500 mb-4">💥 FIM DE JOGO!</h2>
+      <p class="text-xl mb-2">Você sobreviveu a <span id="finalSurvivals" class="text-green-400">0</span> rodadas</p>
+      <p class="text-gray-400 mb-6">O destino não estava do seu lado desta vez...</p>
+      <button id="restartBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300">
+        🔄 Jogar Novamente
+      </button>
     </div>
   </div>
 
@@ -146,10 +204,28 @@
     const status = document.getElementById('status');
     const muzzleFlash = document.getElementById('muzzleFlash');
     const smoke = document.getElementById('smoke');
+    const gameOver = document.getElementById('gameOver');
+    const restartBtn = document.getElementById('restartBtn');
+    const roundsPlayedEl = document.getElementById('roundsPlayed');
+    const survivalsEl = document.getElementById('survivals');
+    const probabilityEl = document.getElementById('probability');
+    const finalSurvivalsEl = document.getElementById('finalSurvivals');
 
     let loadedChamber = -1;
     let currentChamber = 0;
     let spinning = false;
+    let roundsPlayed = 0;
+    let survivals = 0;
+
+    function updateStats() {
+      roundsPlayedEl.textContent = roundsPlayed;
+      survivalsEl.textContent = survivals;
+      
+      // Calcular probabilidade atual de sobrevivência
+      const remainingChambers = 6 - (roundsPlayed % 6);
+      const probability = (remainingChambers / 6 * 100).toFixed(1);
+      probabilityEl.textContent = `${probability}%`;
+    }
 
     function playSound(type) {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -158,9 +234,18 @@
       osc.connect(gain);
       gain.connect(ctx.destination);
 
-      if (type === 'spin') { osc.frequency.value = 200; gain.gain.value = 0.2; }
-      if (type === 'click') { osc.frequency.value = 700; gain.gain.value = 0.2; }
-      if (type === 'bang') { osc.frequency.value = 80; gain.gain.value = 0.6; }
+      if (type === 'spin') { 
+        osc.frequency.value = 200; 
+        gain.gain.value = 0.2; 
+      }
+      if (type === 'click') { 
+        osc.frequency.value = 700; 
+        gain.gain.value = 0.2; 
+      }
+      if (type === 'bang') { 
+        osc.frequency.value = 80; 
+        gain.gain.value = 0.6; 
+      }
 
       osc.start();
       osc.stop(ctx.currentTime + 0.2);
@@ -186,12 +271,17 @@
       fireBtn.disabled = true;
       playSound('spin');
       status.textContent = "Girando o tambor...";
+      
+      // Removido o ponto vermelho que denunciava o projétil
+      // Agora o projétil é invisível para o jogador
       loadedChamber = Math.floor(Math.random() * 6);
       currentChamber = Math.floor(Math.random() * 6);
+      
       chambers.forEach((ch, i) => {
         ch.className = 'cylinder-chamber';
-        if (i === loadedChamber) ch.classList.add('loaded');
+        // Não adicionamos mais a classe 'loaded' que mostrava o ponto vermelho
       });
+      
       cylinder.classList.add('spin-animation');
       setTimeout(() => {
         cylinder.classList.remove('spin-animation');
@@ -199,6 +289,7 @@
         spinBtn.disabled = false;
         fireBtn.disabled = false;
         spinning = false;
+        spinBtn.classList.remove('pulse-animation');
       }, 2000);
     };
 
@@ -207,20 +298,55 @@
       cylinder.classList.add('shake-animation');
       setTimeout(() => {
         cylinder.classList.remove('shake-animation');
+        
+        roundsPlayed++;
+        
         if (currentChamber === loadedChamber) {
+          // Jogador perdeu
           muzzleFlash.classList.add('show');
           smoke.classList.add('show');
           playSound('bang');
           status.textContent = "💥 BANG!";
-          setTimeout(() => muzzleFlash.classList.remove('show'), 400);
-          setTimeout(() => smoke.classList.remove('show'), 2000);
+          
+          setTimeout(() => {
+            muzzleFlash.classList.remove('show');
+          }, 400);
+          
+          setTimeout(() => {
+            smoke.classList.remove('show');
+            // Mostrar tela de game over
+            finalSurvivalsEl.textContent = survivals;
+            gameOver.classList.add('show');
+          }, 2000);
         } else {
+          // Jogador sobreviveu
+          survivals++;
           status.textContent = "✨ Click! Você sobreviveu...";
           playSound('click');
+          spinBtn.classList.add('pulse-animation');
         }
+        
         currentChamber = (currentChamber + 1) % 6;
+        updateStats();
       }, 300);
     };
+
+    restartBtn.onclick = () => {
+      // Reiniciar o jogo
+      roundsPlayed = 0;
+      survivals = 0;
+      loadedChamber = -1;
+      currentChamber = 0;
+      status.textContent = "Pressione 'Girar Tambor' para começar";
+      gameOver.classList.remove('show');
+      spinBtn.disabled = false;
+      fireBtn.disabled = true;
+      spinBtn.classList.add('pulse-animation');
+      updateStats();
+    };
+
+    // Inicializar estatísticas
+    updateStats();
   </script>
 </body>
 </html>
