@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roleta Russa</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(1080deg); } }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+      20%, 40%, 60%, 80% { transform: translateX(10px); }
+    }
+    @keyframes muzzle-flash {
+      0% { opacity: 0; transform: scale(0.5); filter: brightness(3); }
+      20% { opacity: 1; transform: scale(1.3); filter: brightness(5); }
+      100% { opacity: 0; transform: scale(2); }
+    }
+    @keyframes smoke {
+      0% { opacity: 0.8; transform: translateY(0) scale(0.5); }
+      50% { opacity: 0.4; transform: translateY(-30px) scale(1); }
+      100% { opacity: 0; transform: translateY(-60px) scale(1.5); }
+    }
+
+    .spin-animation { animation: spin 2s ease-out; }
+    .shake-animation { animation: shake 0.5s; }
+
+    .cylinder {
+      position: relative;
+      width: 220px;
+      height: 220px;
+      margin: 0 auto;
+      background: radial-gradient(circle at 30% 30%, #4e4e4e, #1b1b1b);
+      border-radius: 50%;
+      box-shadow: inset 0 0 20px #000, 0 4px 12px rgba(0,0,0,0.5);
+    }
+    .cylinder-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #5D5CDE, #3534a5);
+      box-shadow: inset 0 0 10px rgba(255,255,255,0.3), 0 0 12px rgba(93,92,222,0.5);
+    }
+
+    .cylinder-chamber {
+      width: 42px;
+      height: 42px;
+      border: 3px solid #ccc;
+      border-radius: 50%;
+      background: radial-gradient(circle, #444, #222);
+      box-shadow: inset 0 0 5px rgba(255,255,255,0.2);
+      position: relative;
+      transition: transform 0.2s;
+    }
+
+    .cylinder-chamber.loaded::after {
+      content: "";
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      background: crimson;
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 10px red;
+    }
+
+    .chamber-position { position: absolute; top: 50%; left: 50%; }
+    .chamber-0 { transform: translate(-50%, -50%) rotate(0deg) translateY(-85px); }
+    .chamber-1 { transform: translate(-50%, -50%) rotate(60deg) translateY(-85px); }
+    .chamber-2 { transform: translate(-50%, -50%) rotate(120deg) translateY(-85px); }
+    .chamber-3 { transform: translate(-50%, -50%) rotate(180deg) translateY(-85px); }
+    .chamber-4 { transform: translate(-50%, -50%) rotate(240deg) translateY(-85px); }
+    .chamber-5 { transform: translate(-50%, -50%) rotate(300deg) translateY(-85px); }
+
+    .muzzle-flash {
+      position: absolute;
+      top: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 60px;
+      background: radial-gradient(circle, yellow, orange, transparent 70%);
+      border-radius: 50%;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .muzzle-flash.show { animation: muzzle-flash 0.3s ease-out; }
+
+    .smoke {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 40px;
+      height: 40px;
+      background: radial-gradient(circle, rgba(200,200,200,0.6), transparent 70%);
+      border-radius: 50%;
+      opacity: 0;
+      pointer-events: none;
+      filter: blur(4px);
+    }
+    .smoke.show { animation: smoke 2s ease-out forwards; }
+  </style>
+</head>
+<body class="bg-[#121212] text-gray-100 min-h-screen flex flex-col justify-center">
+  <div class="container mx-auto px-4 max-w-2xl text-center">
+    <h1 class="text-5xl font-bold mb-6 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">🎯 Roleta Russa</h1>
+    <p class="text-gray-400 mb-8">Gire o tambor e veja se o destino está do seu lado...</p>
+
+    <div class="bg-gray-800 p-8 rounded-2xl shadow-2xl mb-8">
+      <div id="cylinder" class="cylinder mx-auto relative">
+        <div class="chamber-position chamber-0"><div class="cylinder-chamber"></div></div>
+        <div class="chamber-position chamber-1"><div class="cylinder-chamber"></div></div>
+        <div class="chamber-position chamber-2"><div class="cylinder-chamber"></div></div>
+        <div class="chamber-position chamber-3"><div class="cylinder-chamber"></div></div>
+        <div class="chamber-position chamber-4"><div class="cylinder-chamber"></div></div>
+        <div class="chamber-position chamber-5"><div class="cylinder-chamber"></div></div>
+        <div class="cylinder-center"></div>
+
+        <!-- efeitos -->
+        <div id="muzzleFlash" class="muzzle-flash"></div>
+        <div id="smoke" class="smoke"></div>
+      </div>
+
+      <p id="status" class="mt-6 text-gray-400 text-sm">Pressione "Girar Tambor" para começar</p>
+    </div>
+
+    <div class="space-y-4">
+      <button id="spinBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-lg">🔄 Girar Tambor</button>
+      <button id="fireBtn" disabled class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-lg disabled:bg-gray-500">🔫 Disparar!</button>
+    </div>
+  </div>
+
+  <script>
+    const cylinder = document.getElementById('cylinder');
+    const chambers = cylinder.querySelectorAll('.cylinder-chamber');
+    const spinBtn = document.getElementById('spinBtn');
+    const fireBtn = document.getElementById('fireBtn');
+    const status = document.getElementById('status');
+    const muzzleFlash = document.getElementById('muzzleFlash');
+    const smoke = document.getElementById('smoke');
+
+    let loadedChamber = -1;
+    let currentChamber = 0;
+    let spinning = false;
+
+    function playSound(type) {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      if (type === 'spin') { osc.frequency.value = 200; gain.gain.value = 0.2; }
+      if (type === 'click') { osc.frequency.value = 700; gain.gain.value = 0.2; }
+      if (type === 'bang') { osc.frequency.value = 80; gain.gain.value = 0.6; }
+
+      osc.start();
+      osc.stop(ctx.currentTime + 0.2);
+
+      // eco adicional no disparo
+      if (type === 'bang') {
+        const echo = ctx.createOscillator();
+        const echoGain = ctx.createGain();
+        echo.connect(echoGain);
+        echoGain.connect(ctx.destination);
+        echo.frequency.value = 60;
+        echoGain.gain.setValueAtTime(0.4, ctx.currentTime + 0.2);
+        echoGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.9);
+        echo.start(ctx.currentTime + 0.2);
+        echo.stop(ctx.currentTime + 1);
+      }
+    }
+
+    spinBtn.onclick = () => {
+      if (spinning) return;
+      spinning = true;
+      spinBtn.disabled = true;
+      fireBtn.disabled = true;
+      playSound('spin');
+      status.textContent = "Girando o tambor...";
+      loadedChamber = Math.floor(Math.random() * 6);
+      currentChamber = Math.floor(Math.random() * 6);
+      chambers.forEach((ch, i) => {
+        ch.className = 'cylinder-chamber';
+        if (i === loadedChamber) ch.classList.add('loaded');
+      });
+      cylinder.classList.add('spin-animation');
+      setTimeout(() => {
+        cylinder.classList.remove('spin-animation');
+        status.textContent = "Tambor pronto. Puxe o gatilho...";
+        spinBtn.disabled = false;
+        fireBtn.disabled = false;
+        spinning = false;
+      }, 2000);
+    };
+
+    fireBtn.onclick = () => {
+      playSound('click');
+      cylinder.classList.add('shake-animation');
+      setTimeout(() => {
+        cylinder.classList.remove('shake-animation');
+        if (currentChamber === loadedChamber) {
+          muzzleFlash.classList.add('show');
+          smoke.classList.add('show');
+          playSound('bang');
+          status.textContent = "💥 BANG!";
+          setTimeout(() => muzzleFlash.classList.remove('show'), 400);
+          setTimeout(() => smoke.classList.remove('show'), 2000);
+        } else {
+          status.textContent = "✨ Click! Você sobreviveu...";
+          playSound('click');
+        }
+        currentChamber = (currentChamber + 1) % 6;
+      }, 300);
+    };
+  </script>
+</body>
+</html>
